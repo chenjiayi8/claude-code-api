@@ -36,6 +36,7 @@ class SessionManager:
 
     def __init__(self):
         self.active_sessions: Dict[str, SessionInfo] = {}
+        self._lock = asyncio.Lock()  # Protects active_sessions dictionary
         self.cleanup_task: Optional[asyncio.Task] = None
         self._start_cleanup_task()
 
@@ -74,8 +75,9 @@ class SessionManager:
             system_prompt=system_prompt,
         )
 
-        # Store in active sessions
-        self.active_sessions[session_id] = session_info
+        # Store in active sessions (protected by lock)
+        async with self._lock:
+            self.active_sessions[session_id] = session_info
 
         # Create database record
         session_data = {
@@ -101,9 +103,10 @@ class SessionManager:
 
     async def get_session(self, session_id: str) -> Optional[SessionInfo]:
         """Get session information."""
-        # Check active sessions first
-        if session_id in self.active_sessions:
-            return self.active_sessions[session_id]
+        # Check active sessions first (protected by lock)
+        async with self._lock:
+            if session_id in self.active_sessions:
+                return self.active_sessions[session_id]
 
         # Load from database if not in memory
         db_session = await db_manager.get_session(session_id)
@@ -121,7 +124,8 @@ class SessionManager:
             session_info.total_tokens = db_session.total_tokens
             session_info.total_cost = db_session.total_cost
 
-            self.active_sessions[session_id] = session_info
+            async with self._lock:
+                self.active_sessions[session_id] = session_info
             return session_info
 
         return None
@@ -200,21 +204,22 @@ class SessionManager:
 
     async def end_session(self, session_id: str):
         """End session and cleanup."""
-        if session_id in self.active_sessions:
-            session_info = self.active_sessions[session_id]
-            session_info.is_active = False
-            del self.active_sessions[session_id]
+        async with self._lock:
+            if session_id in self.active_sessions:
+                session_info = self.active_sessions[session_id]
+                session_info.is_active = False
+                del self.active_sessions[session_id]
 
-            logger.info(
-                "Session ended",
-                session_id=session_id,
-                duration_minutes=(
-                    datetime.utcnow() - session_info.created_at
-                ).total_seconds()
-                / 60,
-                total_tokens=session_info.total_tokens,
-                total_cost=session_info.total_cost,
-            )
+                logger.info(
+                    "Session ended",
+                    session_id=session_id,
+                    duration_minutes=(
+                        datetime.utcnow() - session_info.created_at
+                    ).total_seconds()
+                    / 60,
+                    total_tokens=session_info.total_tokens,
+                    total_cost=session_info.total_cost,
+                )
 
     async def cleanup_expired_sessions(self):
         """Clean up expired sessions."""
@@ -222,9 +227,10 @@ class SessionManager:
         timeout_delta = timedelta(minutes=settings.session_timeout_minutes)
         expired_sessions = []
 
-        for session_id, session_info in self.active_sessions.items():
-            if current_time - session_info.updated_at > timeout_delta:
-                expired_sessions.append(session_id)
+        async with self._lock:
+            for session_id, session_info in self.active_sessions.items():
+                if current_time - session_info.updated_at > timeout_delta:
+                    expired_sessions.append(session_id)
 
         for session_id in expired_sessions:
             await self.end_session(session_id)
@@ -232,7 +238,8 @@ class SessionManager:
 
     async def cleanup_all(self):
         """Clean up all sessions."""
-        session_ids = list(self.active_sessions.keys())
+        async with self._lock:
+            session_ids = list(self.active_sessions.keys())
         for session_id in session_ids:
             await self.end_session(session_id)
 
