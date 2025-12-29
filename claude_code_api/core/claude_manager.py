@@ -82,6 +82,8 @@ class ClaudeProcess:
                 logger.info(
                     f"Passing Anthropic environment variables: {list(anthropic_env_vars.keys())}"
                 )
+                # Ensure Anthropic-specific variables are included in the subprocess environment
+                env.update(anthropic_env_vars)
 
             # Claude CLI runs to completion, so we run it and capture all output
             self.process = await asyncio.create_subprocess_exec(
