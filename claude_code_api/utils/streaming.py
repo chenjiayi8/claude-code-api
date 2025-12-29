@@ -77,7 +77,8 @@ class OpenAIStreamConverter:
                     "index": 0,
                     "delta": {"role": "assistant", "content": ""},
                     "finish_reason": None
-                }]
+                }],
+                "session_id": self.session_id
             }
             yield SSEFormatter.format_event(initial_chunk)
             
@@ -146,7 +147,8 @@ class OpenAIStreamConverter:
                     "index": 0,
                     "delta": {},
                     "finish_reason": "stop"
-                }]
+                }],
+                "session_id": self.session_id
             }
             yield SSEFormatter.format_event(final_chunk)
             
