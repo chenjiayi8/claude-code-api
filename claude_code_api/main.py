@@ -9,6 +9,8 @@ import os
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -30,9 +32,33 @@ from claude_code_api.api.sessions import router as sessions_router
 from claude_code_api.core.auth import auth_middleware
 
 
-# Configure structured logging
+# Create logs directory if it doesn't exist
+logs_dir = Path("./logs")
+logs_dir.mkdir(exist_ok=True)
+
+# Configure Python's standard logging to work with structlog
+logging.basicConfig(
+    format="%(message)s",
+    level=logging.INFO,
+    handlers=[
+        logging.StreamHandler(),  # Console output
+    ]
+)
+
+# Add file handler to root logger
+file_handler = RotatingFileHandler(
+    logs_dir / "claude_api.log",
+    maxBytes=10 * 1024 * 1024,  # 10MB
+    backupCount=5,
+    encoding="utf-8"
+)
+file_handler.setLevel(logging.INFO)
+logging.root.addHandler(file_handler)
+
+# Configure structlog with processors for both console and file output
 structlog.configure(
     processors=[
+        structlog.contextvars.merge_contextvars,
         structlog.stdlib.filter_by_level,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
