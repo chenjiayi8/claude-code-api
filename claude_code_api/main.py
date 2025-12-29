@@ -84,16 +84,16 @@ logger = structlog.get_logger()
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     logger.info("Starting Claude Code API Gateway", version="1.0.0")
-    
+
     # Initialize database
     await create_tables()
     logger.info("Database initialized")
-    
+
     # Initialize managers
     app.state.session_manager = SessionManager()
     app.state.claude_manager = ClaudeManager()
     logger.info("Managers initialized")
-    
+
     # Verify Claude Code availability
     try:
         claude_version = await app.state.claude_manager.get_version()
@@ -102,11 +102,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error("Claude Code not available", error=str(e))
         raise HTTPException(
             status_code=503,
-            detail="Claude Code CLI not available. Please ensure Claude Code is installed and accessible."
+            detail="Claude Code CLI not available. Please ensure Claude Code is installed and accessible.",
         )
-    
+
     yield
-    
+
     # Cleanup
     logger.info("Shutting down Claude Code API Gateway")
     await app.state.session_manager.cleanup_all()
@@ -120,7 +120,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -144,7 +144,7 @@ async def global_exception_handler(request, exc):
         path=request.url.path,
         method=request.method,
         error=str(exc),
-        exc_info=True
+        exc_info=True,
     )
     return JSONResponse(
         status_code=500,
@@ -152,9 +152,9 @@ async def global_exception_handler(request, exc):
             "error": {
                 "message": "Internal server error",
                 "type": "internal_error",
-                "code": "internal_error"
+                "code": "internal_error",
             }
-        }
+        },
     )
 
 
@@ -164,21 +164,17 @@ async def health_check():
     try:
         # Check Claude Code availability
         claude_version = await app.state.claude_manager.get_version()
-        
+
         return {
             "status": "healthy",
             "version": "1.0.0",
             "claude_version": claude_version,
-            "active_sessions": len(app.state.session_manager.active_sessions)
+            "active_sessions": len(app.state.session_manager.active_sessions),
         }
     except Exception as e:
         logger.error("Health check failed", error=str(e))
         return JSONResponse(
-            status_code=503,
-            content={
-                "status": "unhealthy",
-                "error": str(e)
-            }
+            status_code=503, content={"status": "unhealthy", "error": str(e)}
         )
 
 
@@ -193,10 +189,10 @@ async def root():
             "chat": "/v1/chat/completions",
             "models": "/v1/models",
             "projects": "/v1/projects",
-            "sessions": "/v1/sessions"
+            "sessions": "/v1/sessions",
         },
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
@@ -209,10 +205,11 @@ app.include_router(sessions_router, prefix="/v1", tags=["sessions"])
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "claude_code_api.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,
-        log_level="info"
+        log_level="info",
     )
