@@ -44,10 +44,13 @@ async def list_models(req: Request) -> ModelListResponse:
 
         for model_type, model_id in custom_model_mappings.items():
             if model_id and model_id not in [m.id for m in claude_models]:
+                # Derive a readable model variant safely from the environment key
+                model_type_parts = model_type.split("_")
+                model_variant = model_type_parts[2] if len(model_type_parts) > 2 else "Custom"
                 # Create a custom model info object
                 custom_model = ClaudeModelInfo(
                     id=model_id,
-                    name=f"Custom Model ({model_type.split('_')[2] if '_' in model_type else 'Custom'})",
+                    name=f"Custom Model ({model_variant})",
                     description=f"Custom model configured via {model_type}",
                     max_tokens=200000,
                     input_cost_per_1k=0.1,
