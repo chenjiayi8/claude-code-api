@@ -144,7 +144,7 @@ async def get_project(project_id: str, req: Request) -> ProjectInfo:
 @router.delete("/projects/{project_id}")
 async def delete_project(project_id: str, req: Request) -> JSONResponse:
     """Delete project by ID."""
-    
+
     project = await db_manager.get_project(project_id)
     if not project:
         raise HTTPException(
@@ -157,15 +157,88 @@ async def delete_project(project_id: str, req: Request) -> JSONResponse:
                 }
             }
         )
-    
+
     # TODO: Implement project deletion in database
     # cleanup_project_directory(project.path)
-    
+
     logger.info("Project deleted", project_id=project_id)
-    
+
     return JSONResponse(
         content={
             "project_id": project_id,
             "status": "deleted"
         }
     )
+
+
+@router.post("/projects/{project_id}/upload-reference")
+async def upload_reference_file(
+    project_id: str,
+    req: Request
+) -> JSONResponse:
+    """
+    Get reference information for uploading a file to the project.
+
+    This endpoint returns information about how to upload a file to the project,
+    including the target path and any additional metadata needed.
+
+    NOTE: This is a reference endpoint that provides upload information.
+    The actual file upload should be done through the chat completions endpoint
+    by including file information in the message context.
+    """
+
+    project = await db_manager.get_project(project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": {
+                    "message": f"Project {project_id} not found",
+                    "type": "not_found",
+                    "code": "project_not_found"
+                }
+            }
+        )
+
+    # Return upload reference information
+    upload_info = {
+        "project_id": project_id,
+        "project_path": project.path,
+        "upload_instructions": {
+            "method": "include_file_in_chat",
+            "description": "To upload a file, include file information in your chat completion request",
+            "example": {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Please analyze this file for me"
+                    },
+                    {
+                        "type": "file_reference",
+                        "file_path": "/path/to/your/file.pdf"
+                    }
+                ]
+            }
+        },
+        "supported_formats": [
+            "PDF", "Word", "Excel", "PowerPoint", "Text",
+            "Code files (.py, .js, .ts, .java, .cpp, etc.)",
+            "Markdown (.md)", "CSV", "JSON", "XML"
+        ],
+        "max_file_size": "20MB",
+        "notes": [
+            "Files are processed through Claude Code's file reading capabilities",
+            "Large files may be truncated or summarized",
+            "Code files are analyzed with syntax highlighting",
+            "Images can be described and analyzed"
+        ]
+    }
+
+    logger.info(
+        "File upload reference requested",
+        project_id=project_id,
+        project_path=project.path
+    )
+
+    return JSONResponse(content=upload_info)
