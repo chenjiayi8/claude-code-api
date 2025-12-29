@@ -43,18 +43,19 @@ logging.basicConfig(
     level=logging.INFO,
     handlers=[
         logging.StreamHandler(),  # Console output
-    ]
+    ],
 )
 
-# Add file handler to root logger
-file_handler = RotatingFileHandler(
-    logs_dir / "claude_api.log",
-    maxBytes=10 * 1024 * 1024,  # 10MB
-    backupCount=5,
-    encoding="utf-8"
-)
-file_handler.setLevel(logging.INFO)
-logging.root.addHandler(file_handler)
+# Add file handler to root logger (check for existing handlers to prevent duplicates)
+if not any(isinstance(h, RotatingFileHandler) for h in logging.root.handlers):
+    file_handler = RotatingFileHandler(
+        logs_dir / "claude_api.log",
+        maxBytes=10 * 1024 * 1024,  # 10MB
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(logging.INFO)
+    logging.root.addHandler(file_handler)
 
 # Configure structlog with processors for both console and file output
 structlog.configure(
@@ -68,7 +69,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
