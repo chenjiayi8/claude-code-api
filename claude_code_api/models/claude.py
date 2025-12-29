@@ -1,5 +1,6 @@
 """Claude Code specific models and utilities."""
 
+import os
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Union, Literal
 from pydantic import BaseModel, Field
@@ -236,8 +237,6 @@ def validate_claude_model(model: str) -> str:
         return model
 
     # Check for custom models from environment variables
-    import os
-
     custom_models = {
         os.getenv("ANTHROPIC_DEFAULT_HAIKU_MODEL"): "haiku",
         os.getenv("ANTHROPIC_DEFAULT_SONNET_MODEL"): "sonnet",
