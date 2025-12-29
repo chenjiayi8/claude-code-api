@@ -174,7 +174,34 @@ class SessionManager:
             cost=cost,
             total_tokens=session_info.total_tokens
         )
-    
+
+    async def get_session_messages(
+        self, session_id: str, limit: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """Get conversation history for a session.
+
+        Args:
+            session_id: Session ID to retrieve messages for
+            limit: Optional limit on number of messages to retrieve
+
+        Returns:
+            List of message dictionaries with role, content, timestamps, and metrics
+        """
+        messages = await db_manager.get_session_messages(session_id, limit)
+
+        # Convert to dict format
+        return [
+            {
+                "role": msg.role,
+                "content": msg.content,
+                "created_at": msg.created_at.isoformat(),
+                "input_tokens": msg.input_tokens,
+                "output_tokens": msg.output_tokens,
+                "cost": msg.cost,
+            }
+            for msg in messages
+        ]
+
     async def end_session(self, session_id: str):
         """End session and cleanup."""
         if session_id in self.active_sessions:
