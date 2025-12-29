@@ -14,7 +14,8 @@ from pathlib import Path
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
-load_dotenv()
+
+load_dotenv(verbose=True)
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
