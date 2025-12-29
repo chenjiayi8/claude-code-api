@@ -9,13 +9,16 @@ from fastapi.responses import JSONResponse
 import structlog
 
 from claude_code_api.models.openai import (
-    ProjectInfo, 
+    ProjectInfo,
     CreateProjectRequest,
     PaginatedResponse,
-    PaginationInfo
+    PaginationInfo,
 )
 from claude_code_api.core.database import db_manager, Project
-from claude_code_api.core.claude_manager import create_project_directory, cleanup_project_directory
+from claude_code_api.core.claude_manager import (
+    create_project_directory,
+    cleanup_project_directory,
+)
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -23,12 +26,10 @@ router = APIRouter()
 
 @router.get("/projects", response_model=PaginatedResponse)
 async def list_projects(
-    page: int = 1,
-    per_page: int = 20,
-    req: Request = None
+    page: int = 1, per_page: int = 20, req: Request = None
 ) -> PaginatedResponse:
     """List all projects."""
-    
+
     # TODO: Implement proper pagination with database
     # For now, return mock data
     projects = [
@@ -39,41 +40,37 @@ async def list_projects(
             path="/tmp/claude_projects/project-1",
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
-            is_active=True
+            is_active=True,
         )
     ]
-    
+
     pagination = PaginationInfo(
         page=page,
         per_page=per_page,
         total_items=len(projects),
         total_pages=1,
         has_next=False,
-        has_prev=False
+        has_prev=False,
     )
-    
-    return PaginatedResponse(
-        data=projects,
-        pagination=pagination
-    )
+
+    return PaginatedResponse(data=projects, pagination=pagination)
 
 
 @router.post("/projects", response_model=ProjectInfo)
 async def create_project(
-    project_request: CreateProjectRequest,
-    req: Request
+    project_request: CreateProjectRequest, req: Request
 ) -> ProjectInfo:
     """Create a new project."""
-    
+
     project_id = str(uuid.uuid4())
-    
+
     # Create project directory
     if project_request.path:
         project_path = project_request.path
         os.makedirs(project_path, exist_ok=True)
     else:
         project_path = create_project_directory(project_id)
-    
+
     # Create project in database
     project_data = {
         "id": project_id,
@@ -82,23 +79,23 @@ async def create_project(
         "path": project_path,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
-        "is_active": True
+        "is_active": True,
     }
-    
+
     try:
         await db_manager.create_project(project_data)
-        
+
         project_info = ProjectInfo(**project_data)
-        
+
         logger.info(
             "Project created",
             project_id=project_id,
             name=project_request.name,
-            path=project_path
+            path=project_path,
         )
-        
+
         return project_info
-        
+
     except Exception as e:
         logger.error("Failed to create project", error=str(e))
         raise HTTPException(
@@ -107,16 +104,16 @@ async def create_project(
                 "error": {
                     "message": f"Failed to create project: {str(e)}",
                     "type": "internal_error",
-                    "code": "project_creation_failed"
+                    "code": "project_creation_failed",
                 }
-            }
+            },
         )
 
 
 @router.get("/projects/{project_id}", response_model=ProjectInfo)
 async def get_project(project_id: str, req: Request) -> ProjectInfo:
     """Get project by ID."""
-    
+
     project = await db_manager.get_project(project_id)
     if not project:
         raise HTTPException(
@@ -125,11 +122,11 @@ async def get_project(project_id: str, req: Request) -> ProjectInfo:
                 "error": {
                     "message": f"Project {project_id} not found",
                     "type": "not_found",
-                    "code": "project_not_found"
+                    "code": "project_not_found",
                 }
-            }
+            },
         )
-    
+
     return ProjectInfo(
         id=project.id,
         name=project.name,
@@ -137,7 +134,7 @@ async def get_project(project_id: str, req: Request) -> ProjectInfo:
         path=project.path,
         created_at=project.created_at,
         updated_at=project.updated_at,
-        is_active=project.is_active
+        is_active=project.is_active,
     )
 
 
@@ -153,9 +150,9 @@ async def delete_project(project_id: str, req: Request) -> JSONResponse:
                 "error": {
                     "message": f"Project {project_id} not found",
                     "type": "not_found",
-                    "code": "project_not_found"
+                    "code": "project_not_found",
                 }
-            }
+            },
         )
 
     # TODO: Implement project deletion in database
@@ -163,19 +160,11 @@ async def delete_project(project_id: str, req: Request) -> JSONResponse:
 
     logger.info("Project deleted", project_id=project_id)
 
-    return JSONResponse(
-        content={
-            "project_id": project_id,
-            "status": "deleted"
-        }
-    )
+    return JSONResponse(content={"project_id": project_id, "status": "deleted"})
 
 
 @router.post("/projects/{project_id}/upload-reference")
-async def upload_reference_file(
-    project_id: str,
-    req: Request
-) -> JSONResponse:
+async def upload_reference_file(project_id: str, req: Request) -> JSONResponse:
     """
     Get reference information for uploading a file to the project.
 
@@ -195,9 +184,9 @@ async def upload_reference_file(
                 "error": {
                     "message": f"Project {project_id} not found",
                     "type": "not_found",
-                    "code": "project_not_found"
+                    "code": "project_not_found",
                 }
-            }
+            },
         )
 
     # Return upload reference information
@@ -210,35 +199,36 @@ async def upload_reference_file(
             "example": {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "text",
-                        "text": "Please analyze this file for me"
-                    },
-                    {
-                        "type": "file_reference",
-                        "file_path": "/path/to/your/file.pdf"
-                    }
-                ]
-            }
+                    {"type": "text", "text": "Please analyze this file for me"},
+                    {"type": "file_reference", "file_path": "/path/to/your/file.pdf"},
+                ],
+            },
         },
         "supported_formats": [
-            "PDF", "Word", "Excel", "PowerPoint", "Text",
+            "PDF",
+            "Word",
+            "Excel",
+            "PowerPoint",
+            "Text",
             "Code files (.py, .js, .ts, .java, .cpp, etc.)",
-            "Markdown (.md)", "CSV", "JSON", "XML"
+            "Markdown (.md)",
+            "CSV",
+            "JSON",
+            "XML",
         ],
         "max_file_size": "20MB",
         "notes": [
             "Files are processed through Claude Code's file reading capabilities",
             "Large files may be truncated or summarized",
             "Code files are analyzed with syntax highlighting",
-            "Images can be described and analyzed"
-        ]
+            "Images can be described and analyzed",
+        ],
     }
 
     logger.info(
         "File upload reference requested",
         project_id=project_id,
-        project_path=project.path
+        project_path=project.path,
     )
 
     return JSONResponse(content=upload_info)
