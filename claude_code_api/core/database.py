@@ -3,8 +3,16 @@
 from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, Boolean, Float,
-    ForeignKey, create_engine, MetaData
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    Boolean,
+    Float,
+    ForeignKey,
+    create_engine,
+    MetaData,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -32,8 +40,9 @@ Base = declarative_base()
 
 class Project(Base):
     """Project model."""
+
     __tablename__ = "projects"
-    
+
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     description = Column(Text)
@@ -41,15 +50,18 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    
+
     # Relationships
-    sessions = relationship("Session", back_populates="project", cascade="all, delete-orphan")
+    sessions = relationship(
+        "Session", back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class Session(Base):
     """Session model."""
+
     __tablename__ = "sessions"
-    
+
     id = Column(String, primary_key=True)
     project_id = Column(String, ForeignKey("projects.id"), nullable=False)
     title = Column(String)
@@ -58,48 +70,52 @@ class Session(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    
+
     # Session metrics
     total_tokens = Column(Integer, default=0)
     total_cost = Column(Float, default=0.0)
     message_count = Column(Integer, default=0)
-    
+
     # Relationships
     project = relationship("Project", back_populates="sessions")
-    messages = relationship("Message", back_populates="session", cascade="all, delete-orphan")
+    messages = relationship(
+        "Message", back_populates="session", cascade="all, delete-orphan"
+    )
 
 
 class Message(Base):
     """Message model."""
+
     __tablename__ = "messages"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(String, ForeignKey("sessions.id"), nullable=False)
     role = Column(String, nullable=False)  # user, assistant, system
     content = Column(Text, nullable=False)
     message_metadata = Column(Text)  # JSON metadata
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Token usage
     input_tokens = Column(Integer, default=0)
     output_tokens = Column(Integer, default=0)
     cost = Column(Float, default=0.0)
-    
+
     # Relationships
     session = relationship("Session", back_populates="messages")
 
 
 class APIKey(Base):
     """API Key model for tracking usage."""
+
     __tablename__ = "api_keys"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     key_hash = Column(String, nullable=False, unique=True)
     name = Column(String)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_used_at = Column(DateTime)
-    
+
     # Usage tracking
     total_requests = Column(Integer, default=0)
     total_tokens = Column(Integer, default=0)
@@ -131,14 +147,15 @@ async def close_database():
 # Database utilities
 class DatabaseManager:
     """Database operations manager."""
-    
+
+    # Project operations
     @staticmethod
     async def get_project(project_id: str) -> Optional[Project]:
         """Get project by ID."""
         async with AsyncSessionLocal() as session:
             result = await session.get(Project, project_id)
             return result
-    
+
     @staticmethod
     async def create_project(project_data: dict) -> Project:
         """Create new project."""
@@ -148,14 +165,15 @@ class DatabaseManager:
             await session.commit()
             await session.refresh(project)
             return project
-    
+
+    # Session operations
     @staticmethod
     async def get_session(session_id: str) -> Optional[Session]:
         """Get session by ID."""
         async with AsyncSessionLocal() as session:
             result = await session.get(Session, session_id)
             return result
-    
+
     @staticmethod
     async def create_session(session_data: dict) -> Session:
         """Create new session."""
@@ -165,7 +183,8 @@ class DatabaseManager:
             await session.commit()
             await session.refresh(session_obj)
             return session_obj
-    
+
+    # Message operations
     @staticmethod
     async def add_message(message_data: dict) -> Message:
         """Add message to session."""
@@ -175,13 +194,9 @@ class DatabaseManager:
             await session.commit()
             await session.refresh(message)
             return message
-    
+
     @staticmethod
-    async def update_session_metrics(
-        session_id: str, 
-        tokens_used: int, 
-        cost: float
-    ):
+    async def update_session_metrics(session_id: str, tokens_used: int, cost: float):
         """Update session usage metrics."""
         async with AsyncSessionLocal() as session:
             session_obj = await session.get(Session, session_id)
