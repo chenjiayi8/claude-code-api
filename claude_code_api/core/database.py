@@ -247,6 +247,7 @@ class DatabaseManager:
 
                 # Update all messages to use new session_id
                 from sqlalchemy import update
+
                 await session.execute(
                     update(Message)
                     .where(Message.session_id == old_session_id)
@@ -255,9 +256,7 @@ class DatabaseManager:
 
                 await session.commit()
                 logger.info(
-                    "Updated session ID",
-                    old_id=old_session_id,
-                    new_id=new_session_id
+                    "Updated session ID", old_id=old_session_id, new_id=new_session_id
                 )
 
 
