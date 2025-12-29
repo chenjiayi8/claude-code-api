@@ -238,26 +238,30 @@ class DatabaseManager:
         for proper session resumption.
         """
         async with AsyncSessionLocal() as session:
-            # Update session record
-            session_obj = await session.get(Session, old_session_id)
-            if session_obj:
-                # Create new session with Claude's ID
-                session_obj.id = new_session_id
-                session.add(session_obj)
+            from sqlalchemy import update
 
-                # Update all messages to use new session_id
-                from sqlalchemy import update
+            # First, update the session record's primary key in place
+            session_update_result = await session.execute(
+                update(Session)
+                .where(Session.id == old_session_id)
+                .values(id=new_session_id)
+            )
 
-                await session.execute(
-                    update(Message)
-                    .where(Message.session_id == old_session_id)
-                    .values(session_id=new_session_id)
-                )
+            # If no session row was updated, nothing to do
+            if session_update_result.rowcount == 0:
+                return
 
-                await session.commit()
-                logger.info(
-                    "Updated session ID", old_id=old_session_id, new_id=new_session_id
-                )
+            # Update all messages to use the new session_id
+            await session.execute(
+                update(Message)
+                .where(Message.session_id == old_session_id)
+                .values(session_id=new_session_id)
+            )
+
+            await session.commit()
+            logger.info(
+                "Updated session ID", old_id=old_session_id, new_id=new_session_id
+            )
 
 
 # Create global database manager instance
