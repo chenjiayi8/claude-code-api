@@ -219,12 +219,12 @@ async def create_chat_completion(req: Request) -> Any:
         )
         if not request.session_id and claude_session_id != session_id:
             await db_manager.update_session_id(session_id, claude_session_id)
-            # Update SessionManager's active sessions dict
-            if session_id in session_manager.active_sessions:
-                session_info = session_manager.active_sessions.pop(session_id)
-                session_info.session_id = claude_session_id
-                session_manager.active_sessions[claude_session_id] = session_info
-            session_id = claude_session_id
+            # Update SessionManager's active sessions dict (protected by lock)
+            async with session_manager._lock:
+                if session_id in session_manager.active_sessions:
+                    session_info = session_manager.active_sessions.pop(session_id)
+                    session_info.session_id = claude_session_id
+                    session_manager.active_sessions[claude_session_id] = session_info
 
         # Update session with user message
         await session_manager.update_session(
