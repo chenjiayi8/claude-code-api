@@ -15,10 +15,7 @@ from claude_code_api.models.openai import (
     PaginationInfo,
 )
 from claude_code_api.core.database import db_manager, Project
-from claude_code_api.core.claude_manager import (
-    create_project_directory,
-    cleanup_project_directory,
-)
+from claude_code_api.core.claude_manager import create_project_directory
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -163,7 +160,7 @@ async def delete_project(project_id: str, req: Request) -> JSONResponse:
     return JSONResponse(content={"project_id": project_id, "status": "deleted"})
 
 
-@router.post("/projects/{project_id}/upload-reference")
+@router.get("/projects/{project_id}/upload-reference")
 async def upload_reference_file(project_id: str, req: Request) -> JSONResponse:
     """
     Get reference information for uploading a file to the project.
