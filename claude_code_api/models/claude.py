@@ -8,6 +8,7 @@ from enum import Enum
 
 class ClaudeModel(str, Enum):
     """Available Claude models - matching Claude Code CLI supported models."""
+
     OPUS_4 = "claude-opus-4-20250514"
     SONNET_4 = "claude-sonnet-4-20250514"
     SONNET_37 = "claude-3-7-sonnet-20250219"
@@ -16,6 +17,7 @@ class ClaudeModel(str, Enum):
 
 class ClaudeMessageType(str, Enum):
     """Claude message types from JSONL output."""
+
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
@@ -27,6 +29,7 @@ class ClaudeMessageType(str, Enum):
 
 class ClaudeToolType(str, Enum):
     """Claude Code built-in tools."""
+
     BASH = "bash"
     EDIT = "edit"
     READ = "read"
@@ -40,6 +43,7 @@ class ClaudeToolType(str, Enum):
 
 class ClaudeMessage(BaseModel):
     """Claude message from JSONL output."""
+
     type: str = Field(..., description="Message type")
     subtype: Optional[str] = Field(None, description="Message subtype")
     message: Optional[Dict[str, Any]] = Field(None, description="Message content")
@@ -58,6 +62,7 @@ class ClaudeMessage(BaseModel):
 
 class ClaudeToolUse(BaseModel):
     """Claude tool use information."""
+
     id: str = Field(..., description="Tool use ID")
     name: str = Field(..., description="Tool name")
     input: Dict[str, Any] = Field(..., description="Tool input parameters")
@@ -65,13 +70,17 @@ class ClaudeToolUse(BaseModel):
 
 class ClaudeToolResult(BaseModel):
     """Claude tool result information."""
+
     tool_use_id: str = Field(..., description="Tool use ID")
     content: Union[str, Dict[str, Any]] = Field(..., description="Tool result content")
-    is_error: Optional[bool] = Field(False, description="Whether this is an error result")
+    is_error: Optional[bool] = Field(
+        False, description="Whether this is an error result"
+    )
 
 
 class ClaudeSessionInfo(BaseModel):
     """Claude session information."""
+
     session_id: str = Field(..., description="Session ID")
     project_path: str = Field(..., description="Project path")
     model: str = Field(..., description="Model being used")
@@ -84,6 +93,7 @@ class ClaudeSessionInfo(BaseModel):
 
 class ClaudeProcessStatus(str, Enum):
     """Claude process status."""
+
     STARTING = "starting"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -94,6 +104,7 @@ class ClaudeProcessStatus(str, Enum):
 
 class ClaudeExecutionRequest(BaseModel):
     """Claude execution request."""
+
     prompt: str = Field(..., description="User prompt")
     project_path: str = Field(..., description="Project path")
     model: Optional[str] = Field(None, description="Model to use")
@@ -104,6 +115,7 @@ class ClaudeExecutionRequest(BaseModel):
 
 class ClaudeExecutionResponse(BaseModel):
     """Claude execution response."""
+
     session_id: str = Field(..., description="Session ID")
     status: ClaudeProcessStatus = Field(..., description="Execution status")
     messages: List[ClaudeMessage] = Field(..., description="Messages from execution")
@@ -114,6 +126,7 @@ class ClaudeExecutionResponse(BaseModel):
 
 class ClaudeStreamingChunk(BaseModel):
     """Claude streaming chunk."""
+
     session_id: str = Field(..., description="Session ID")
     chunk_type: str = Field(..., description="Type of chunk")
     data: ClaudeMessage = Field(..., description="Chunk data")
@@ -122,20 +135,28 @@ class ClaudeStreamingChunk(BaseModel):
 
 class ClaudeProjectConfig(BaseModel):
     """Claude project configuration."""
+
     project_id: str = Field(..., description="Project ID")
     name: str = Field(..., description="Project name")
     path: str = Field(..., description="Project path")
     default_model: str = Field(ClaudeModel.HAIKU_35, description="Default model")
     system_prompt: Optional[str] = Field(None, description="Default system prompt")
-    tools_enabled: List[ClaudeToolType] = Field(default_factory=list, description="Enabled tools")
+    tools_enabled: List[ClaudeToolType] = Field(
+        default_factory=list, description="Enabled tools"
+    )
     max_tokens: Optional[int] = Field(None, description="Maximum tokens per request")
     temperature: Optional[float] = Field(None, description="Temperature setting")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation time")
-    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update time")
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow, description="Creation time"
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow, description="Last update time"
+    )
 
 
 class ClaudeFileInfo(BaseModel):
     """Claude file information."""
+
     path: str = Field(..., description="File path")
     name: str = Field(..., description="File name")
     size: int = Field(..., description="File size in bytes")
@@ -146,6 +167,7 @@ class ClaudeFileInfo(BaseModel):
 
 class ClaudeWorkspaceInfo(BaseModel):
     """Claude workspace information."""
+
     path: str = Field(..., description="Workspace path")
     files: List[ClaudeFileInfo] = Field(..., description="Files in workspace")
     total_files: int = Field(..., description="Total number of files")
@@ -155,6 +177,7 @@ class ClaudeWorkspaceInfo(BaseModel):
 
 class ClaudeVersionInfo(BaseModel):
     """Claude version information."""
+
     version: str = Field(..., description="Claude Code version")
     build: Optional[str] = Field(None, description="Build information")
     is_available: bool = Field(..., description="Whether Claude is available")
@@ -163,15 +186,21 @@ class ClaudeVersionInfo(BaseModel):
 
 class ClaudeErrorInfo(BaseModel):
     """Claude error information."""
+
     error_type: str = Field(..., description="Type of error")
     message: str = Field(..., description="Error message")
-    session_id: Optional[str] = Field(None, description="Session ID where error occurred")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
+    session_id: Optional[str] = Field(
+        None, description="Session ID where error occurred"
+    )
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow, description="Error timestamp"
+    )
     traceback: Optional[str] = Field(None, description="Error traceback")
 
 
 class ClaudeMetrics(BaseModel):
     """Claude usage metrics."""
+
     total_sessions: int = Field(..., description="Total number of sessions")
     active_sessions: int = Field(..., description="Currently active sessions")
     total_tokens: int = Field(..., description="Total tokens processed")
@@ -184,13 +213,16 @@ class ClaudeMetrics(BaseModel):
 
 class ClaudeModelInfo(BaseModel):
     """Claude model information."""
+
     id: str = Field(..., description="Model ID")
     name: str = Field(..., description="Model display name")
     description: str = Field(..., description="Model description")
     max_tokens: int = Field(..., description="Maximum tokens supported")
     input_cost_per_1k: float = Field(..., description="Input cost per 1K tokens")
     output_cost_per_1k: float = Field(..., description="Output cost per 1K tokens")
-    supports_streaming: bool = Field(True, description="Whether model supports streaming")
+    supports_streaming: bool = Field(
+        True, description="Whether model supports streaming"
+    )
     supports_tools: bool = Field(True, description="Whether model supports tool use")
 
 
@@ -199,12 +231,29 @@ def validate_claude_model(model: str) -> str:
     """Validate and normalize Claude model name."""
     # Direct Claude model names
     valid_models = [model.value for model in ClaudeModel]
-    
+
     if model in valid_models:
         return model
-    
-    # Default to Haiku for testing
-    return ClaudeModel.HAIKU_35
+
+    # Check for custom models from environment variables
+    import os
+
+    custom_models = {
+        os.getenv("ANTHROPIC_DEFAULT_HAIKU_MODEL"): "haiku",
+        os.getenv("ANTHROPIC_DEFAULT_SONNET_MODEL"): "sonnet",
+        os.getenv("ANTHROPIC_DEFAULT_OPUS_MODEL"): "opus",
+    }
+
+    # Remove None values
+    custom_models = {k: v for k, v in custom_models.items() if k}
+
+    if model in custom_models:
+        # Return the custom model name as-is
+        return model
+
+    # For any other model name, just pass it through
+    # This allows arbitrary model names from environment or custom configs
+    return model
 
 
 def get_default_model() -> str:
@@ -223,7 +272,7 @@ def get_model_info(model_id: str) -> ClaudeModelInfo:
             input_cost_per_1k=15.0,
             output_cost_per_1k=75.0,
             supports_streaming=True,
-            supports_tools=True
+            supports_tools=True,
         ),
         ClaudeModel.SONNET_4: ClaudeModelInfo(
             id=ClaudeModel.SONNET_4,
@@ -233,7 +282,7 @@ def get_model_info(model_id: str) -> ClaudeModelInfo:
             input_cost_per_1k=3.0,
             output_cost_per_1k=15.0,
             supports_streaming=True,
-            supports_tools=True
+            supports_tools=True,
         ),
         ClaudeModel.SONNET_37: ClaudeModelInfo(
             id=ClaudeModel.SONNET_37,
@@ -243,7 +292,7 @@ def get_model_info(model_id: str) -> ClaudeModelInfo:
             input_cost_per_1k=3.0,
             output_cost_per_1k=15.0,
             supports_streaming=True,
-            supports_tools=True
+            supports_tools=True,
         ),
         ClaudeModel.HAIKU_35: ClaudeModelInfo(
             id=ClaudeModel.HAIKU_35,
@@ -253,10 +302,10 @@ def get_model_info(model_id: str) -> ClaudeModelInfo:
             input_cost_per_1k=0.25,
             output_cost_per_1k=1.25,
             supports_streaming=True,
-            supports_tools=True
-        )
+            supports_tools=True,
+        ),
     }
-    
+
     return model_info.get(model_id, model_info[ClaudeModel.HAIKU_35])
 
 
