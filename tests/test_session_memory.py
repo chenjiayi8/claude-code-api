@@ -2,27 +2,39 @@
 """Test script to verify session ID and memory persistence fixes."""
 
 import requests
-import json
 
 
 def test_session_id_and_memory():
     """Test that session_id is returned and memory is persisted."""
     base_url = "http://localhost:8000"
 
-    print("=" * 60)
-    print("Test 1: Session ID with Standard Claude Model")
-    print("=" * 60)
+    try:
+        print("=" * 60)
+        print("Test 1: Session ID with Standard Claude Model")
+        print("=" * 60)
 
-    # Test 1: Standard Claude model with session continuity
-    print("\n1. First request - introducing name...")
-    response1 = requests.post(
-        f"{base_url}/v1/chat/completions",
-        headers={"Content-Type": "application/json"},
-        json={
-            "model": "claude-3-5-haiku-20241022",
-            "messages": [{"role": "user", "content": "My name is Alice"}],
-        },
-    )
+        # Test 1: Standard Claude model with session continuity
+        print("\n1. First request - introducing name...")
+        response1 = requests.post(
+            f"{base_url}/v1/chat/completions",
+            headers={"Content-Type": "application/json"},
+            json={
+                "model": "claude-3-5-haiku-20241022",
+                "messages": [{"role": "user", "content": "My name is Alice"}],
+            },
+            timeout=30,
+        )
+    except requests.exceptions.ConnectionError:
+        print(f"\n✗ FAIL: Could not connect to server at {base_url}")
+        print("Please ensure the server is running and try again.")
+        return
+    except requests.exceptions.Timeout:
+        print("\n✗ FAIL: Request timed out")
+        print("The server is taking too long to respond.")
+        return
+    except Exception as e:
+        print(f"\n✗ FAIL: Unexpected error: {str(e)}")
+        return
 
     print(f"Status Code: {response1.status_code}")
     if response1.status_code == 200:
