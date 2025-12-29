@@ -20,6 +20,7 @@ from claude_code_api.models.openai import (
 from claude_code_api.models.claude import validate_claude_model, get_model_info
 from claude_code_api.core.claude_manager import create_project_directory
 from claude_code_api.core.session_manager import SessionManager, ConversationManager
+from claude_code_api.core.database import db_manager
 from claude_code_api.utils.streaming import (
     create_sse_response,
     create_non_streaming_response,
@@ -157,6 +158,7 @@ async def create_chat_completion(req: Request) -> Any:
         project_path = create_project_directory(project_id)
 
         # Handle session management
+        claude_session_to_resume = None
         if request.session_id:
             # Continue existing session
             session_id = request.session_id
@@ -173,6 +175,7 @@ async def create_chat_completion(req: Request) -> Any:
                         }
                     },
                 )
+            claude_session_to_resume = session_id
         else:
             # Create new session
             session_id = await session_manager.create_session(
@@ -187,7 +190,7 @@ async def create_chat_completion(req: Request) -> Any:
                 prompt=user_prompt,
                 model=claude_model,
                 system_prompt=system_prompt,
-                resume_session=request.session_id,
+                resume_session=claude_session_to_resume,
             )
         except Exception as e:
             logger.error(
@@ -206,6 +209,22 @@ async def create_chat_completion(req: Request) -> Any:
 
         # Use Claude's actual session ID
         claude_session_id = claude_process.session_id
+
+        # If this is a new session and Claude generated a different session_id,
+        # update the database to use Claude's session_id for future lookups
+        logger.debug(
+            "Claude session started",
+            requested_session_id=session_id,
+            claude_session_id=claude_session_id,
+        )
+        if not request.session_id and claude_session_id != session_id:
+            await db_manager.update_session_id(session_id, claude_session_id)
+            # Update SessionManager's active sessions dict
+            if session_id in session_manager.active_sessions:
+                session_info = session_manager.active_sessions.pop(session_id)
+                session_info.session_id = claude_session_id
+                session_manager.active_sessions[claude_session_id] = session_info
+            session_id = claude_session_id
 
         # Update session with user message
         await session_manager.update_session(
