@@ -8,7 +8,7 @@ This is a **Claude Code API Gateway** - a Python FastAPI service that provides O
 
 ## Project Location
 
-**Workspace Path**: `/home/frank/Growatt/Workspaces/claude-code-api/`
+**Workspace Path**: `<your-workspace-root>/claude-code-api/`
 
 The main application code is located in the `claude_code_api/` subdirectory.
 
