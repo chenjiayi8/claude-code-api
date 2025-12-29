@@ -207,6 +207,59 @@ class DatabaseManager:
                 session_obj.updated_at = datetime.utcnow()
                 await session.commit()
 
+    @staticmethod
+    async def get_session_messages(
+        session_id: str, limit: Optional[int] = None
+    ) -> List[Message]:
+        """Get all messages for a session in chronological order."""
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy import select
+
+            # Build query
+            query = (
+                select(Message)
+                .where(Message.session_id == session_id)
+                .order_by(Message.created_at.asc())
+            )
+
+            if limit:
+                query = query.limit(limit)
+
+            result = await session.execute(query)
+            messages = result.scalars().all()
+            return messages
+
+    @staticmethod
+    async def update_session_id(old_session_id: str, new_session_id: str):
+        """Update session ID to match Claude's session ID.
+
+        This is needed because Claude CLI generates its own session IDs,
+        but we need to update our database records to use Claude's ID
+        for proper session resumption.
+        """
+        async with AsyncSessionLocal() as session:
+            # Update session record
+            session_obj = await session.get(Session, old_session_id)
+            if session_obj:
+                # Create new session with Claude's ID
+                session_obj.id = new_session_id
+                session.add(session_obj)
+
+                # Update all messages to use new session_id
+                from sqlalchemy import update
+                await session.execute(
+                    update(Message)
+                    .where(Message.session_id == old_session_id)
+                    .values(session_id=new_session_id)
+                )
+
+                await session.commit()
+                logger.info(
+                    "Updated session ID",
+                    old_id=old_session_id,
+                    new_id=new_session_id
+                )
+
 
 # Create global database manager instance
 db_manager = DatabaseManager()
