@@ -57,8 +57,6 @@ class ClaudeProcess:
                     "stream-json",
                     "--verbose",
                     "--dangerously-skip-permissions",
-                    "--settings",
-                    '{"hooks": {}}',
                 ]
             )
 

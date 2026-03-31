@@ -217,9 +217,11 @@ async def create_chat_completion(req: Request) -> Any:
             requested_session_id=session_id,
             claude_session_id=claude_session_id,
         )
-        if claude_session_id and claude_session_id != session_id:
+        if not request.session_id and claude_session_id and claude_session_id != session_id:
+            # Only remap on first call (no session_id provided). On resume calls,
+            # the original session_id must be preserved because Claude CLI stores
+            # the JSONL file under the original ID on disk.
             await db_manager.update_session_id(session_id, claude_session_id)
-            # Update SessionManager's active sessions dict (protected by lock)
             async with session_manager._lock:
                 if session_id in session_manager.active_sessions:
                     session_info = session_manager.active_sessions.pop(session_id)
