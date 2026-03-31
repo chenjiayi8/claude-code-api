@@ -57,7 +57,8 @@ class ClaudeProcess:
                     "stream-json",
                     "--verbose",
                     "--dangerously-skip-permissions",
-                    "--bare",
+                    "--settings",
+                    '{"hooks": {}}',
                 ]
             )
 
@@ -68,14 +69,13 @@ class ClaudeProcess:
                 model=model or settings.default_model,
             )
 
-            # Start process from src directory (where Claude works without API key)
-            src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-            logger.info(f"Starting Claude from directory: {src_dir}")
+            # Run from the project directory so Claude explores the right codebase
+            work_dir = self.project_path if os.path.isdir(self.project_path) else os.getcwd()
+            logger.info(f"Starting Claude from directory: {work_dir}")
             logger.info(f"Command: {' '.join(cmd)}")
 
             # Prepare environment with custom Anthropic settings if present
             env = os.environ.copy()
-            # Pass through all ANTHROPIC_* environment variables
             anthropic_env_vars = {
                 k: v for k, v in os.environ.items() if k.startswith("ANTHROPIC_")
             }
@@ -83,13 +83,12 @@ class ClaudeProcess:
                 logger.info(
                     f"Passing Anthropic environment variables: {list(anthropic_env_vars.keys())}"
                 )
-                # Ensure Anthropic-specific variables are included in the subprocess environment
                 env.update(anthropic_env_vars)
 
             # Claude CLI runs to completion, so we run it and capture all output
             self.process = await asyncio.create_subprocess_exec(
                 *cmd,
-                cwd=src_dir,
+                cwd=work_dir,
                 env=env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -352,7 +351,13 @@ class ClaudeManager:
 
 # Utility functions for project management
 def create_project_directory(project_id: str) -> str:
-    """Create project directory."""
+    """Create or resolve project directory.
+
+    If project_id is an absolute path to an existing directory, use it directly.
+    Otherwise, create a subdirectory under project_root.
+    """
+    if os.path.isabs(project_id) and os.path.isdir(project_id):
+        return project_id
     project_path = os.path.join(settings.project_root, project_id)
     os.makedirs(project_path, exist_ok=True)
     return project_path
