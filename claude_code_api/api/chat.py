@@ -217,7 +217,7 @@ async def create_chat_completion(req: Request) -> Any:
             requested_session_id=session_id,
             claude_session_id=claude_session_id,
         )
-        if not request.session_id and claude_session_id != session_id:
+        if claude_session_id and claude_session_id != session_id:
             await db_manager.update_session_id(session_id, claude_session_id)
             # Update SessionManager's active sessions dict (protected by lock)
             async with session_manager._lock:

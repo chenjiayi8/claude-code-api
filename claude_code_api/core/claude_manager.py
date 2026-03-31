@@ -50,13 +50,14 @@ class ClaudeProcess:
                 cmd.extend(["--resume", resume_session])
                 logger.info("Resuming Claude session", session_id=resume_session)
 
-            # Always use stream-json output format (exact order from working example)
+            # Always use stream-json output format
             cmd.extend(
                 [
                     "--output-format",
                     "stream-json",
                     "--verbose",
                     "--dangerously-skip-permissions",
+                    "--bare",
                 ]
             )
 
