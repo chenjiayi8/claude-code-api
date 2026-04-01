@@ -105,6 +105,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             detail="Claude Code CLI not available. Please ensure Claude Code is installed and accessible.",
         )
 
+    # Install plugins if requested via environment variable
+    plugins = os.environ.get("INSTALL_PLUGINS", "")
+    if plugins:
+        import subprocess as _sp
+        for plugin in plugins.split(","):
+            plugin = plugin.strip()
+            if plugin:
+                logger.info("Installing plugin", plugin=plugin)
+                _sp.run(["claude", "plugin", "install", plugin], check=True)
+        logger.info("Plugins installed")
+
     yield
 
     # Cleanup
