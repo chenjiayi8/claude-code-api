@@ -84,15 +84,9 @@ class OpenAIStreamConverter:
             
             assistant_started = False
             last_content = ""
-            chunk_count = 0
-            max_chunks = 5  # Limit chunks for better UX
-            
+
             # Process Claude output
             async for claude_message in claude_process.get_output():
-                chunk_count += 1
-                if chunk_count > max_chunks:
-                    logger.info("Reached max chunks limit, terminating stream")
-                    break
                 try:
                     # Simple: just look for assistant messages in the dict
                     if isinstance(claude_message, dict):
