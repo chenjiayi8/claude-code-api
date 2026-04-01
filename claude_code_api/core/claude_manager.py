@@ -88,7 +88,7 @@ class ClaudeProcess:
             # Claude CLI runs to completion, so we run it and capture all output
             self.process = await asyncio.create_subprocess_exec(
                 *cmd,
-                cwd=src_dir,
+                cwd=self.project_path if os.path.isdir(self.project_path) else os.getcwd(),
                 env=env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -351,7 +351,13 @@ class ClaudeManager:
 
 # Utility functions for project management
 def create_project_directory(project_id: str) -> str:
-    """Create project directory."""
+    """Create or resolve project directory.
+
+    If project_id is an absolute path to an existing directory, return it as-is.
+    Otherwise create under settings.project_root.
+    """
+    if os.path.isabs(project_id) and os.path.isdir(project_id):
+        return project_id
     project_path = os.path.join(settings.project_root, project_id)
     os.makedirs(project_path, exist_ok=True)
     return project_path
