@@ -78,6 +78,12 @@ class ChatCompletionResponse(BaseModel):
     # Extension fields
     session_id: Optional[str] = Field(None, description="Session ID for this completion")
     project_id: Optional[str] = Field(None, description="Project ID for this completion")
+    tool_calls: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Additive Claude tool calls surfaced at the top level of non-streaming responses"
+        ),
+    )
 
 
 # Streaming Models

@@ -30,6 +30,10 @@ from claude_code_api.utils.parser import ClaudeOutputParser, estimate_tokens
 logger = structlog.get_logger()
 router = APIRouter()
 
+# Robustness guardrail for non-streaming collection if a final result message
+# never arrives from Claude output.
+MAX_NON_STREAMING_MESSAGES = 5000
+
 
 @router.post("/chat/completions")
 async def create_chat_completion(req: Request) -> Any:
@@ -282,8 +286,17 @@ async def create_chat_completion(req: Request) -> Any:
                 if isinstance(claude_message, dict):
                     is_final = claude_message.get("type") == "result"
 
-                # Stop on final message or after a reasonable number of messages
-                if is_final or len(messages) > 10:  # Safety limit for testing
+                # Stop on final result message
+                if is_final:
+                    break
+
+                # Generous safety guard so we don't accumulate unbounded output.
+                if len(messages) >= MAX_NON_STREAMING_MESSAGES:
+                    logger.warning(
+                        "Non-streaming collection reached safety guardrail",
+                        session_id=claude_session_id,
+                        max_messages=MAX_NON_STREAMING_MESSAGES,
+                    )
                     break
 
             # Log what we collected
@@ -309,6 +322,25 @@ async def create_chat_completion(req: Request) -> Any:
                 model=claude_model,
                 usage_summary=usage_summary,
             )
+
+            message_tool_calls = []
+            if (
+                response.get("choices")
+                and len(response["choices"]) > 0
+                and "message" in response["choices"][0]
+            ):
+                parsed_message_tool_calls = response["choices"][0]["message"].get(
+                    "tool_calls"
+                )
+                if isinstance(parsed_message_tool_calls, list):
+                    message_tool_calls = parsed_message_tool_calls
+
+            top_level_tool_calls = response.get("tool_calls")
+            additive_tool_calls = list(message_tool_calls)
+            if isinstance(top_level_tool_calls, list):
+                additive_tool_calls.extend(top_level_tool_calls)
+
+            response["tool_calls"] = additive_tool_calls
 
             # Add extension fields
             response["project_id"] = project_id

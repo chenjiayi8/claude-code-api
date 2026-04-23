@@ -342,8 +342,9 @@ def create_non_streaming_response(
         completion_id=completion_id
     )
     
-    # Extract assistant content from Claude messages
+    # Extract assistant content + tool calls from Claude messages
     content_parts = []
+    tool_calls = []
     for i, msg in enumerate(messages):
         logger.info(
             f"Processing message {i}",
@@ -366,25 +367,42 @@ def create_non_streaming_response(
                 # Handle content array format: [{"type":"text","text":"..."}]
                 if isinstance(message_content, list):
                     for content_item in message_content:
-                        if isinstance(content_item, dict) and content_item.get("type") == "text":
-                            text = content_item.get("text", "").strip()
-                            if text:
-                                content_parts.append(text)
-                                logger.info(f"Extracted text from array: {text[:50]}...")
+                        if isinstance(content_item, dict):
+                            if content_item.get("type") == "text":
+                                text = content_item.get("text", "").strip()
+                                if text:
+                                    content_parts.append(text)
+                                    logger.info(f"Extracted text from array: {text[:50]}...")
+                            elif content_item.get("type") == "tool_use":
+                                tool_call = {
+                                    "id": content_item.get("id", ""),
+                                    "name": content_item.get("name", ""),
+                                    "input": content_item.get("input", {})
+                                    if isinstance(content_item.get("input"), dict)
+                                    else {}
+                                }
+                                tool_calls.append(tool_call)
+                                logger.info(
+                                    "Extracted tool call from array",
+                                    tool_name=tool_call["name"],
+                                    tool_id=tool_call["id"]
+                                )
                 # Handle simple string content
                 elif isinstance(message_content, str) and message_content.strip():
                     text = message_content.strip()
                     content_parts.append(text)
                     logger.info(f"Extracted text from string: {text[:50]}...")
     
-    # Use the actual content or fallback - ensure we always have content
+    # Use extracted content, while allowing tool-only outputs to stay text-empty
     if content_parts:
         complete_content = "\n".join(content_parts).strip()
+    elif tool_calls:
+        complete_content = ""
     else:
         complete_content = "Hello! I'm Claude, ready to help."
     
-    # Ensure content is never empty
-    if not complete_content:
+    # Ensure content is never empty unless tool calls are present
+    if not complete_content and not tool_calls:
         complete_content = "Response received but content was empty."
     
     logger.info(
@@ -394,6 +412,8 @@ def create_non_streaming_response(
         final_content_preview=complete_content[:100] if complete_content else "empty"
     )
     
+    finish_reason = "tool_calls" if tool_calls else "stop"
+
     # Return simple OpenAI-compatible response with basic usage stats
     response = {
         "id": completion_id,
@@ -406,7 +426,7 @@ def create_non_streaming_response(
                 "role": "assistant",
                 "content": complete_content
             },
-            "finish_reason": "stop"
+            "finish_reason": finish_reason
         }],
         "usage": {
             "prompt_tokens": 10,
@@ -415,6 +435,7 @@ def create_non_streaming_response(
         },
         "session_id": session_id
     }
+    response["tool_calls"] = tool_calls
     
     logger.info(
         "Response created successfully",
